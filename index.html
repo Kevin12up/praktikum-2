@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Format Changer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background: #f5f5f5;
+            transition: background 0.3s ease-in-out;
+            overflow: hidden;
+        }
+        .container {
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 400px;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .upload-box {
+            border: 2px dashed #4CAF50;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: 0.3s;
+            background: #fff;
+        }
+        .upload-box:hover {
+            background: #e8f5e9;
+        }
+        .upload-box p {
+            color: #555;
+            font-size: 16px;
+        }
+        .upload-box span {
+            color: #4CAF50;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .preview {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .preview img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        label {
+            margin-top: 10px;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        select, input {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            transition: 0.3s;
+            width: 80%;
+        }
+        select:focus, input:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 16px;
+            margin-top: 10px;
+            width: 100%;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #388E3C;
+        }
+        .dark-mode {
+            background: #222 !important;
+        }
+        .dark-mode .container {
+            background: #333;
+            color: #fff;
+        }
+        .dark-mode .upload-box {
+            border-color: #ddd;
+        }
+        .dark-mode button {
+            background: #76c893;
+        }
+        .toggle-switch {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+        }
+        .toggle-switch input {
+            display: none;
+        }
+        .toggle-switch .slider {
+            width: 45px;
+            height: 22px;
+            background: #ccc;
+            border-radius: 22px;
+            position: relative;
+            cursor: pointer;
+        }
+        .toggle-switch .slider::before {
+            content: "";
+            width: 20px;
+            height: 20px;
+            background: white;
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .slider {
+            background: #4CAF50;
+        }
+        .toggle-switch input:checked + .slider::before {
+            left: 22px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Format Changer by kevin</h1>
+        <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle">
+            <span class="slider"></span>
+        </label>
+        
+        <div class="upload-box" id="dropArea">
+            <p>Drag & Drop or <span>Select an Image</span></p>
+            <input type="file" id="imageInput" accept="image/*">
+        </div>
+
+        <div class="preview" id="preview">
+            <p>Preview:</p>
+            <img id="previewImage" src="" alt="Image Preview">
+        </div>
+        
+        <div class="options">
+            <label>Choose Format:</label>
+            <select id="formatSelect">
+                <option value="png">PNG</option>
+                <option value="jpg">JPG</option>
+                <option value="webp">WEBP</option>
+            </select>
+
+            <label>Quality:</label>
+            <input type="range" id="qualitySlider" min="10" max="100" value="90">
+            <span id="qualityValue">90</span>
+        </div>
+
+        <canvas id="canvas"></canvas>
+        
+        <button id="convertBtn">Convert & Download</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const imageInput = document.getElementById("imageInput");
+            const previewContainer = document.getElementById("preview");
+            const previewImage = document.getElementById("previewImage");
+            const formatSelect = document.getElementById("formatSelect");
+            const qualitySlider = document.getElementById("qualitySlider");
+            const qualityValue = document.getElementById("qualityValue");
+            const convertBtn = document.getElementById("convertBtn");
+            const dropArea = document.getElementById("dropArea");
+            const darkModeToggle = document.getElementById("darkModeToggle");
+
+            let uploadedImage = null;
+
+            qualitySlider.addEventListener("input", () => {
+                qualityValue.textContent = qualitySlider.value;
+            });
+
+            imageInput.addEventListener("change", handleFile);
+            dropArea.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropArea.style.background = "#e8f5e9";
+            });
+
+            dropArea.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dropArea.style.background = "#fff";
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    processImage(file);
+                }
+            });
+
+            function handleFile(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    processImage(file);
+                }
+            }
+
+            function processImage(file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    previewContainer.style.display = "block";
+                    previewImage.src = event.target.result;
+                    uploadedImage = new Image();
+                    uploadedImage.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            convertBtn.addEventListener("click", () => {
+                if (!uploadedImage) {
+                    alert("Please upload an image first.");
+                    return;
+                }
+                const format = formatSelect.value;
+                const quality = qualitySlider.value / 100;
+                const link = document.createElement("a");
+                link.href = previewImage.src;
+                link.download = `converted.${format}`;
+                link.click();
+            });
+
+            darkModeToggle.addEventListener("change", () => {
+                document.body.classList.toggle("dark-mode");
+            });
+        });
+    </script>
+</body>
+</html>
